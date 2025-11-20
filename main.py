@@ -27,7 +27,7 @@ stop_words = [
 
 with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
-
+# same as the clean trainging data function
 def clean_sentence(user):
     userInput = user.lower()
     sentence = re.sub(r"[^\w\s]", "", userInput).strip()
@@ -36,26 +36,26 @@ def clean_sentence(user):
 
 
     return keywords
-
+# cleans the 3000 words we are trainging it on, breaks into sentences and stores in map
 def clean_training_data(training_data):
-    sentences = training_data.lower().split(".")
+    parts = [p.strip() for p in training_data.split("|") if p.strip()]
+
     cleaned_data = []
 
-    for s in sentences:
-        # Remove punctuation
-        sentence = re.sub(r"[^\w\s]", "", s).strip()
-        if not sentence:
-            continue
+    # Process every group of 3
+    for i in range(0, len(parts), 3):
+        sentence = parts[i]
+        keywords = parts[i+1]
+        questions = parts[i+2]
 
-        # Extract keywords (non-stopwords)
-        words = sentence.split()
-        keywords = [w for w in words if w not in stop_words]
-
-        # Store this sentence and its keywords
         cleaned_data.append({
             "sentence": sentence,
-            "keywords": keywords
+            "keywords": [k.strip() for k in keywords.split(",")],
+            "questions": [q.strip() for q in questions.split(",")]
         })
+
+    for item in cleaned_data:
+        print(item)
 
     print(cleaned_data)
     return cleaned_data
@@ -65,7 +65,7 @@ def clean_training_data(training_data):
 
 
 question_words = ['who', 'what', 'when', 'where', 'why', 'how']
-
+# finds the question words 
 def locate_questions_words(training_data):
     words = training_data.lower().split()
     word_counts = {}
@@ -76,6 +76,7 @@ def locate_questions_words(training_data):
 
     print(word_counts)
 
+# determines if its a question or not (still needs work)
 def is_question(userInput):
     userInput = userInput.lower().split(" ")
     if "?" in userInput:
@@ -85,6 +86,10 @@ def is_question(userInput):
             return True
     return False
 
+ #this function will loop through the cleaned data and give a score based on the keywords passed in from the input
+def get_relevance(cleaned_data, keywords):
+    
+    return
 
 
 
@@ -96,4 +101,4 @@ userInput = ['Who is the main character in the movie?',
 
 print(is_question(userInput[0]), clean_sentence(userInput[0]))
 
-# print(clean_training_data(training_data))
+print(clean_training_data(training_data))
