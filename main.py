@@ -1,104 +1,126 @@
-#this is the main file
 import re
+import spacy
 
+# Load spaCy model
+nlp = spacy.load("en_core_web_sm")
+
+# ---------------------- STOP WORDS ----------------------
 stop_words = [
     "a", "an", "the", "and", "or", "but",
     "if", "then", "else",
     "is", "am", "are", "was", "were", "be", "been", "being",
     "have", "has", "had", "having",
-    "do", "does", "did", "doing","in", "on", "at", "to", "from", "by", "with", "about", "over", 
-    "under","for", "of", "off", "up", "down","he", "she", "it", "they", "them", "his", "her", "their",
-    "its","you", "your", "me", "my", "mine", "we", "our", "us","this", "that", "these", "those","as",
-    "so", "such", "than", "too","can", "could", "shall", "should", "will", "would",
-    "may", "might", "must","not", "no", "nor","just","only","really","very","maybe", "probably", "literally", "basically",
-    "actually", "simply", "kind", "kindof", "sort", "sortof", "things",
-    "stuff", "thing", "anyway", "almost", "mostly", "often", "sometimes",
-    "somehow", "somewhat", "slightly", "pretty", "quite", "rather", "even",
-    "else", "yet", "already", "around", "back", "away", "together",
-    "throughout", "across", "within", "without", "between", "among",
-    "toward", "towards", "along", "though", "although", "perhaps",
-    "however", "meanwhile", "overall", "further", "furthermore",
-    "additionally", "besides", "therefore", "thus"
+    "do", "does", "did", "doing", "in", "on", "at", "to", "from", "by", "with",
+    "about", "over", "under", "for", "of", "off", "up", "down",
+    "he", "she", "it", "they", "them", "his", "her", "their", "its",
+    "you", "your", "me", "my", "mine", "we", "our", "us",
+    "this", "that", "these", "those",
+    "as", "so", "such", "than", "too",
+    "can", "could", "shall", "should", "will", "would",
+    "may", "might", "must",
+    "not", "no", "nor",
+    "just", "only", "really", "very",
+    "maybe", "probably", "literally", "basically",
+    "actually", "simply",
+    "things", "stuff", "thing"
 ]
 
+question_words = ['who', 'what', 'when', 'where', 'why', 'how']
 
-
-
-
+# ---------------------- DATA LOADING ----------------------
 with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
-# same as the clean trainging data function
-def clean_sentence(user):
-    userInput = user.lower()
-    sentence = re.sub(r"[^\w\s]", "", userInput).strip()
-    words = sentence.split()
-    keywords = [w for w in words if w not in stop_words]
 
+# ---------------------- CLEAN SENTENCE W/ SPACY ----------------------
+def clean_sentence(user_input):
+    doc = nlp(user_input)
+
+    keywords = []
+    for token in doc:
+        if token.is_alpha and token.lemma_ not in stop_words:
+            if token.pos_ in ["NOUN", "PROPN", "VERB"]:  
+                keywords.append(token.lemma_.lower())
 
     return keywords
-# cleans the 3000 words we are trainging it on, breaks into sentences and stores in map
+
+# ---------------------- FORMAT TRAINING DATA ----------------------
 def clean_training_data(training_data):
     parts = [p.strip() for p in training_data.split("|") if p.strip()]
-
     cleaned_data = []
 
-    # Process every group of 3
     for i in range(0, len(parts), 3):
         sentence = parts[i]
         keywords = parts[i+1]
         questions = parts[i+2]
 
+        keyword_list = []
+        for k in keywords.split(","):
+            k = k.strip()
+            cleaned = clean_sentence(k)
+            keyword_list.extend(cleaned)
+
         cleaned_data.append({
             "sentence": sentence,
-            "keywords": [k.strip() for k in keywords.split(",")],
+            "keywords": keyword_list,
             "questions": [q.strip() for q in questions.split(",")]
         })
 
-    for item in cleaned_data:
-        print(item)
-
-    print(cleaned_data)
     return cleaned_data
 
-
-
-
-
-question_words = ['who', 'what', 'when', 'where', 'why', 'how']
-# finds the question words 
-def locate_questions_words(training_data):
-    words = training_data.lower().split()
-    word_counts = {}
-
-    for word in words:
-        if word in question_words:
-            word_counts[word] = word_counts.get(word, 0) + 1
-
-    print(word_counts)
-
-# determines if its a question or not (still needs work)
-def is_question(userInput):
-    userInput = userInput.lower().split(" ")
-    if "?" in userInput:
+# ---------------------- QUESTION DETECTION ----------------------
+def is_question(user_input):
+    lower = user_input.lower().strip()
+    if lower.endswith("?"):
         return True
-    for word in userInput:
-        if word in question_words:
-            return True
+    if lower.split()[0] in question_words:
+        return True
     return False
 
- #this function will loop through the cleaned data and give a score based on the keywords passed in from the input
+# ---------------------- RELEVANCE SYSTEM ----------------------
 def get_relevance(cleaned_data, keywords):
-    
-    return
 
+    best_item = None
+    best_score = 0
 
+    for item in cleaned_data:
+        score = 0
 
+        for kw in keywords:
+            if kw in item["keywords"]:
+                score += 2      
 
-userInput = ['Who is the main character in the movie?',
-            'What year was this movie release?',
-            'How old is Leonardos characer', 
-            'This is new info to add']
+        # for kw in keywords:
+        #     if kw in item["sentence"].lower():
+        #         score += 1
 
-print(is_question(userInput[0]), clean_sentence(userInput[0]))
+        if score > best_score:
+            best_score = score
+            best_item = item
 
-print(clean_training_data(training_data))
+    return best_item, best_score
+
+# ---------------------- MAIN TEST ----------------------
+user_inputs = [
+    "Who is the main character in the movie?",
+    "What year was this movie released?",
+    "How old is Leonardo's character?",
+    "This is new info to add", 
+    "how did he get caught", 
+    "how much money did he make? "
+]
+
+cleaned = clean_training_data(training_data)
+
+for u in user_inputs:
+    print("\nUSER:", u)
+    print("Question?", is_question(u))
+    keywords = clean_sentence(u)
+    print("Keywords:", keywords)
+
+    match, score = get_relevance(cleaned, keywords)
+
+    if match:
+        print("Best Match:", match["sentence"])
+        print("Score:", score)
+    else:
+        print("I'm sorry, I do not know about this topic.")
