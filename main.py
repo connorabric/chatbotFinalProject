@@ -4,7 +4,7 @@ import spacy
 # Load spaCy model
 nlp = spacy.load("en_core_web_sm")
 
-# ---------------------- STOP WORDS ----------------------
+# ---------------------- STOP WORDS, SYNONYMS, MISSPELLED WORDS----------------------
 stop_words = [
     "a", "an", "the", "and", "or", "but",
     "if", "then", "else",
@@ -25,6 +25,71 @@ stop_words = [
     "things", "stuff", "thing"
 ]
 
+# Common misspellings including everyday and movie-related words
+misspellings = {
+    # everyday words
+    "the": ["teh", "thhe", "tah"],
+    "here": ["heer", "her", "hre"],
+    "there": ["ther", "thare", "thre"],
+    "and": ["adn", "nad", "annd"],
+    "for": ["fro", "fr", "foor"],
+    "you": ["yuo", "yoou", "u"],
+    "with": ["wiht", "wth", "wihth"],
+    "that": ["taht", "tht", "thaat"],
+    "was": ["wsa", "ws", "waas"],
+    "have": ["hav", "hvae", "haev"],
+    "play": ["plaay", "paly", "plae", "plai"],
+    "actor": ["akctor", "actorr", "acter", "actr"],
+    "movie": ["moovie", "movvie", "movi", "movve"],
+    "watch": ["wahtch", "wach", "wathc", "wotch"],
+    "film": ["flim", "fliim", "filmm", "falm"],
+    "role": ["rol", "rolle", "roel", "rolle"],
+    "scene": ["sceen", "scnee", "sene", "scen"],
+    "director": ["direktor", "dirctor", "directer", "direcor"],
+    "performance": ["performence", "perfomance", "performnce", "performnce"],
+    "award": ["awrd", "awrad", "aword", "aword"],
+}
+
+
+synonyms = {
+    "play": ["plays", "played", "portrays", "acts", "depicts"],
+    "role": ["roles", "character", "part", "portrayal", "persona"],
+    "catch": ["pursue", "chase", "apprehend", "hunt", "track down"],
+    "fool": ["deceive", "trick", "outsmart", "beguile", "mislead"],
+    "forgery": ["counterfeit", "fake", "falsification", "fraud", "replica"],
+    "flight": ["plane ride", "aviation", "air travel", "airline", "pilot journey"],
+    "investigate": ["investigates", "investigated", "investigating", "look into", "probe"],
+    "lawyer": ["attorney", "counsel", "legal advisor", "advocate", "solicitor"],
+    "detective": ["agent", "investigator", "officer", "FBI agent", "sleuth"],
+    "escape": ["escapes", "evades", "flee", "run away", "get away"],
+}
+
+# Basic greetings dictionary with shorter statements
+greetings = {
+    "hi": "Hello! Great to see you.",
+    "hello": "Hi there! Welcome.",
+    "hey": "Hey! Nice to have you here.",
+    "good morning": "Good morning! Wishing you a bright day.",
+    "good afternoon": "Good afternoon! Hope your day is going well.",
+    "good evening": "Good evening! Glad you're here.",
+    "hey there": "Hey there! Nice to see you.",
+    "what's up": "Not much! Glad you're here.",
+    "howdy": "Howdy! Wishing you a good day.",
+    "greetings": "Greetings! Happy to have you here.",
+    "yo": "Yo! Great to see you.",
+    "hiya": "Hiya! Nice to connect.",
+    "sup": "Sup! Glad you're here.",
+    "hello there": "Hello there! Great to have you here.",
+    "hiya friend": "Hiya friend! Always nice to see you.",
+    "hey buddy": "Hey buddy! Glad you're around.",
+    "hi everyone": "Hi everyone! Wonderful to see you all.",
+    "morning": "Morning! Wishing you a good day.",
+    "afternoon": "Afternoon! Hope your day is going well.",
+    "evening": "Evening! Great to have you here.",
+}
+
+
+
 question_words = ['who', 'what', 'when', 'where', 'why', 'how']
 
 # ---------------------- DATA LOADING ----------------------
@@ -42,6 +107,21 @@ def clean_sentence(user_input):
                 keywords.append(token.lemma_.lower())
 
     return keywords
+# ------------------------- CHECK SPELLING -------------------------
+def check_spelling(user_input):
+    words = user_input.split(" ")
+    for word in words:
+        for k,v in misspellings.items():
+            for w in v:
+                if word == w:
+                    words.remove(word)
+                    print(word)
+                    word = k
+                    words.append(word)
+                    print("New", word)
+    print(words)
+
+    return
 
 # ---------------------- FORMAT TRAINING DATA ----------------------
 def clean_training_data(training_data):
@@ -101,7 +181,7 @@ def get_relevance(cleaned_data, keywords):
 
 # ---------------------- MAIN TEST ----------------------
 user_inputs = [
-    "Who is the main character in the movie?",
+    "Who is teh main character in the movvie",
     "What year was this movie released?",
     "How old is Leonardo's character?",
     "This is new info to add", 
@@ -109,18 +189,21 @@ user_inputs = [
     "how much money did he make? "
 ]
 
-cleaned = clean_training_data(training_data)
+# cleaned = clean_training_data(training_data)
 
-for u in user_inputs:
-    print("\nUSER:", u)
-    print("Question?", is_question(u))
-    keywords = clean_sentence(u)
-    print("Keywords:", keywords)
+# for u in user_inputs:
+#     print("\nUSER:", u)
+#     print("Question?", is_question(u))
+#     keywords = clean_sentence(u)
+#     print("Keywords:", keywords)
 
-    match, score = get_relevance(cleaned, keywords)
+#     match, score = get_relevance(cleaned, keywords)
 
-    if match:
-        print("Best Match:", match["sentence"])
-        print("Score:", score)
-    else:
-        print("I'm sorry, I do not know about this topic.")
+#     if match:
+#         print("Best Match:", match["sentence"])
+#         print("Score:", score)
+#     else:
+#         print("I'm sorry, I do not know about this topic.")
+
+
+print(check_spelling(user_inputs[0]))
