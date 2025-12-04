@@ -92,7 +92,7 @@ with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
 def clean_sentence(user_input):
     doc = nlp(user_input)
     keywords = [token.lemma_.lower() for token in doc 
-                if token.is_alpha and token.lemma_ not in stop_words and token.pos_ in ["NOUN","PROPN","VERB"]]
+                if token.is_alpha and token.lemma_ not in stop_words and token.pos_ in ["NOUN","PROPN","ADJ","VERB"]]
     return keywords
 # ---------------------- CLEAN TRAINING DATA ----------------------
 def clean_training_data(training_data):
@@ -171,8 +171,11 @@ def get_relevance(cleaned_data, keywords):
 # ---------------------- QUESTION DETECTION ----------------------
 def is_question(msg):
     text = msg.lower().strip()
+    print()
     if text.endswith("?") or text.split()[0] in question_words:
+        print("made it")
         keywords = clean_sentence(msg)
+        print(keywords)
         return get_relevance(cleaned_data, keywords) or "I'm not sure, but I'll learn more soon!"
     return None
 
