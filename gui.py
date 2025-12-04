@@ -1,14 +1,12 @@
-from main import *
+from main import bot_response  
 
 from tkinter import *
-import ttkbootstrap as tb  # to install do: pip install ttkbootstrap
+import ttkbootstrap as tb
 from ttkbootstrap.scrolled import ScrolledText
 
-# Try other themes: superhero darky cyborg vapor lumen minty morph
 root = tb.Window(themename="solar")
 root.title("Simple Virtual Assistant")
 root.geometry("690x635")
-
 
 def send_message(event=None):
     msg = my_message.get()
@@ -16,9 +14,9 @@ def send_message(event=None):
         chat_window.insert(tb.END, "You: " + msg + "\n")
         my_message.set("")
 
-
-def bot_response(response):
-    chat_window.insert(tb.END, "Agent: " + response + "\n")
+        response = bot_response(msg)
+        chat_window.insert(tb.END, "Agent: " + response + "\n")
+        print(response)
 
 
 chat_window = ScrolledText(
@@ -56,6 +54,6 @@ send_button.grid(row=1, column=1)
 topic = 'Titanic movie'
 initial_response = "Hi, I am your virtual assistant, ask me anything about " + topic
 
-root.after(500, lambda: bot_response(initial_response))
+root.after(500, lambda: chat_window.insert(tb.END, "Agent: " + initial_response + "\n"))
 
 root.mainloop()

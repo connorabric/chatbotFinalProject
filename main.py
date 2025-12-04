@@ -1,7 +1,6 @@
 import re
 import spacy
 
-# Load spaCy model
 nlp = spacy.load("en_core_web_sm")
 
 # ---------------------- STOP WORDS, SYNONYMS, MISSPELLED WORDS----------------------
@@ -25,9 +24,7 @@ stop_words = [
     "things", "stuff", "thing"
 ]
 
-# Common misspellings including everyday and movie-related words
 misspellings = {
-    # everyday words
     "the": ["teh", "thhe", "tah"],
     "here": ["heer", "her", "hre"],
     "there": ["ther", "thare", "thre"],
@@ -50,7 +47,6 @@ misspellings = {
     "award": ["awrd", "awrad", "aword", "aword"],
 }
 
-
 synonyms = {
     "play": ["plays", "played", "portrays", "acts", "depicts"],
     "role": ["roles", "character", "part", "portrayal", "persona"],
@@ -64,7 +60,6 @@ synonyms = {
     "escape": ["escapes", "evades", "flee", "run away", "get away"],
 }
 
-# Basic greetings dictionary with shorter statements
 greetings = {
     "hi": "Hello! Great to see you.",
     "hello": "Hi there! Welcome.",
@@ -88,42 +83,18 @@ greetings = {
     "evening": "Evening! Great to have you here.",
 }
 
-
-
 question_words = ['who', 'what', 'when', 'where', 'why', 'how']
 
 # ---------------------- DATA LOADING ----------------------
 with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
-
-# ---------------------- CLEAN SENTENCE W/ SPACY ----------------------
+# ---------------------- CLEAN SENTENCE ----------------------
 def clean_sentence(user_input):
     doc = nlp(user_input)
-
-    keywords = []
-    for token in doc:
-        if token.is_alpha and token.lemma_ not in stop_words:
-            if token.pos_ in ["NOUN", "PROPN", "VERB"]:  
-                keywords.append(token.lemma_.lower())
-
+    keywords = [token.lemma_.lower() for token in doc 
+                if token.is_alpha and token.lemma_ not in stop_words and token.pos_ in ["NOUN","PROPN","VERB"]]
     return keywords
-# ------------------------- CHECK SPELLING -------------------------
-def check_spelling(user_input):
-    words = user_input.split(" ")
-    for word in words:
-        for k,v in misspellings.items():
-            for w in v:
-                if word == w:
-                    words.remove(word)
-                    print(word)
-                    word = k
-                    words.append(word)
-                    print("New", word)
-    print(words)
-
-    return
-
-# ---------------------- FORMAT TRAINING DATA ----------------------
+# ---------------------- CLEAN TRAINING DATA ----------------------
 def clean_training_data(training_data):
     parts = [p.strip() for p in training_data.split("|") if p.strip()]
     cleaned_data = []
@@ -138,7 +109,6 @@ def clean_training_data(training_data):
             k = k.strip()
             cleaned = clean_sentence(k)
             keyword_list.extend(cleaned)
-
         cleaned_data.append({
             "sentence": sentence,
             "keywords": keyword_list,
@@ -147,63 +117,110 @@ def clean_training_data(training_data):
 
     return cleaned_data
 
-# ---------------------- QUESTION DETECTION ----------------------
-def is_question(user_input):
-    lower = user_input.lower().strip()
-    if lower.endswith("?"):
-        return True
-    if lower.split()[0] in question_words:
-        return True
-    return False
+cleaned_data = clean_training_data(training_data)  # Clean once
 
-# ---------------------- RELEVANCE SYSTEM ----------------------
+# ---------------------- CHECK GREETING ----------------------
+def check_greeting(msg):
+    msg = msg.strip().lower()
+    msg = re.sub(r'[^a-zA-Z ]', '', msg)
+    return greetings.get(msg)
+
+
+
+# ---------------------- SPELLING ----------------------
+def correct_spelling(msg):
+    words = msg.split()
+    corrected = []
+    for w in words:
+        found = False
+        for key, variants in misspellings.items():
+            if w.lower() in variants:
+                corrected.append(key)
+                found = True
+                break
+        if not found:
+            corrected.append(w)
+    return " ".join(corrected)
+
+# ---------------------- SYNONYMS ----------------------
+def replace_synonyms(msg):
+    words = msg.split()
+    replaced = []
+    for w in words:
+        replaced_word = w
+        for key, syn_list in synonyms.items():
+            if w.lower() in syn_list or w.lower() == key:
+                replaced_word = key
+                break
+        replaced.append(replaced_word)
+    return " ".join(replaced)
+
+# ---------------------- RELEVANCE ----------------------
 def get_relevance(cleaned_data, keywords):
-
     best_item = None
     best_score = 0
-
     for item in cleaned_data:
-        score = 0
-
-        for kw in keywords:
-            if kw in item["keywords"]:
-                score += 2      
-
-        # for kw in keywords:
-        #     if kw in item["sentence"].lower():
-        #         score += 1
-
+        score = sum(2 for kw in keywords if kw in item["keywords"])
         if score > best_score:
             best_score = score
             best_item = item
+    if best_item:
+        return best_item["sentence"]
+    return None
 
-    return best_item, best_score
+# ---------------------- QUESTION DETECTION ----------------------
+def is_question(msg):
+    text = msg.lower().strip()
+    if text.endswith("?") or text.split()[0] in question_words:
+        keywords = clean_sentence(msg)
+        return get_relevance(cleaned_data, keywords) or "I'm not sure, but I'll learn more soon!"
+    return None
 
-# ---------------------- MAIN TEST ----------------------
+# ---------------------- NEW INFO ----------------------
+def is_new_info(msg):
+    # Placeholder: logic to learn new facts
+    if msg.lower() == "testing":
+        return "Got it! Added new info."
+    return None
+
+# ---------------------- PREPROCESS ----------------------
+def preprocess(msg):
+    msg = correct_spelling(msg)
+    msg = replace_synonyms(msg)
+    return msg
+
+# ---------------------- MAIN BOT RESPONSE, THIS IS THE MAIN LOGIC ----------------------
+def bot_response(msg):
+    tester = False  
+    msg = preprocess(msg)
+
+    greeting = check_greeting(msg)
+    if greeting:
+        tester = True
+        return greeting
+
+    answer = is_question(msg)
+    if answer:
+        tester = True
+        return answer
+
+    new_info_response = is_new_info(msg)
+    if new_info_response:
+        tester = True
+        return new_info_response
+
+    if not tester:
+        return "Sorry, I am not sure about this. Is there something else you would like to ask?"
+
+
+# ---------------------- TEST ----------------------
 user_inputs = [
-    "Who is teh main character in the movvie",
+    "Who is teh main character in the movvie?",
     "What year was this movie released?",
     "How old is Leonardo's character?",
     "This is new info to add", 
     "how did he get caught", 
-    "how much money did he make? "
+    "how much money did he make?"
 ]
 
-# cleaned = clean_training_data(training_data)
 
-# for u in user_inputs:
-#     print("\nUSER:", u)
-#     print("Question?", is_question(u))
-#     keywords = clean_sentence(u)
-#     print("Keywords:", keywords)
-
-#     match, score = get_relevance(cleaned, keywords)
-
-#     if match:
-#         print("Best Match:", match["sentence"])
-#         print("Score:", score)
-#     else:
-#         print("I'm sorry, I do not know about this topic.")
-
-
-print(check_spelling(user_inputs[0]))
