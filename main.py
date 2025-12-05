@@ -83,7 +83,7 @@ greetings = {
     "evening": "Evening! Great to have you here.",
 }
 
-question_words = ['who', 'what', 'when', 'where', 'why', 'how']
+question_words = ['who', 'what', 'when', 'where', 'why', 'how', 'do', 'does', 'if', "which"]
 
 # ---------------------- DATA LOADING ----------------------
 with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
