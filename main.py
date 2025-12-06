@@ -92,7 +92,10 @@ greetings = {
 question_words = ['who', 'what', 'when', 'where', 'why', 'how', 'do', 'does', 'if', "which"]
 
 # ---------------------- DATA LOADING ----------------------
-with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
+# with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
+#     training_data = file.read()
+
+with open("/Users/Tanner/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
 
 # ---------------------- CLEAN TRAINING DATA ----------------------
@@ -234,8 +237,14 @@ def is_question(msg):
         # Get keywords from the question
         keywords = clean_sentence(msg)
         
-        # Use simplified relevance matching
-        answer = get_relevance(cleaned_data, keywords, question_type, msg)
+        
+        #Determines if question is the same
+        same = is_same_question(msg)
+        if same:
+            answer = same + get_relevance(cleaned_data, keywords, question_type, msg) # Use simplified relevance matching
+            return answer
+        
+        answer = get_relevance(cleaned_data, keywords, question_type, msg) # Use simplified relevance matching
         return answer or "I'm not sure, but I'll learn more soon!"
     
     return None
@@ -251,6 +260,28 @@ def preprocess(msg):
     msg = correct_spelling(msg)
     msg = replace_synonyms(msg)
     return msg
+
+# ---------------------- IS SAME QUESTION ----------------------
+last_question = None
+times_repeated = 0
+
+def is_same_question(msg):
+    global last_question
+    global times_repeated
+
+    # Determines if the question is the same as the last_question
+    if msg == last_question:
+        times_repeated += 1
+    else:
+        last_question = msg
+        times_repeated = 0
+        return
+    
+    # Determines the number of times asked and answers differently based on how many times asked
+    if times_repeated == 1:
+        return "I have already responded to this question, but to satisfy your curiosity, "
+    elif times_repeated > 1:
+        return f"I have answered this {times_repeated} times already, but to satisfy your curiosity, "
 
 # ---------------------- MAIN BOT RESPONSE ----------------------
 def bot_response(msg):
@@ -292,3 +323,13 @@ def bot_response(msg):
 #         response = bot_response(test_input)
 #         print(f"Q: {test_input}")
 #         print(f"A: {response}\n")
+
+if __name__ == "__main__":
+    answer = bot_response("how old is leonardo?")
+    print(answer)
+    answer = bot_response("how old is leonardo?")
+    print(answer)  
+    answer = bot_response("how old is leonardo?")
+    print(answer)
+    answer = bot_response("how old is leonardo?")
+    print(answer)
