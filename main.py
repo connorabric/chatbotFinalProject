@@ -45,17 +45,6 @@ misspellings = {
     "director": ["direktor", "dirctor", "directer", "direcor"],
     "performance": ["performence", "perfomance", "performnce", "performnce"],
     "award": ["awrd", "awrad", "aword", "aword"],
-    "becomes" : ['becoms', 'becames', 'becums','becmoes', 'becmes', 'becones','becemose','becimes','becames','becoems'],
-    "frank" : ['frnak','fank','frnk','frark','frannk','frnak','fraank','frak','frnka'],
-    "emotional" : ['emitional','emotinal','emmotional','emocional','emmotianal','emotionel','emotionnal','emtionel','emoiotnal','emontional'],
-    "hanratty" : ['hanraty','hanratti','hanrattey','hanrattty','hanratly','hanarty','hanrattyy','hanrattye','harnatty','hanrarty'],
-    "who" : ['woh','wgo','wh','wo','wjo','whp','whi','wuo'],
-    "film" : ['flim','filim','filnm','fllm','filn','fliim','filmm','filim','fllim','filsm'],
-    "life" : ['lfie','lfe','lif','liife','lifr','lifee','liffe','liife','lifd','lifw'],
-    "identity" : ['identity','identitiy','idenety','idnentity','identiy','identiyt','identity','ideeity'],
-    "father" : ['fater','fahter','fther','fathar','fathe','fgather','fatherr','faterh','faterj','fathre','fagher'],
-    "even" : ['evan','evn','eeven','eevn','evem','efen','eben','evne','evem','eveb'],
-
 }
 
 synonyms = {
@@ -89,7 +78,7 @@ greetings = {
     "evening": "Evening! Great to have you here.",
 }
 
-question_words = ['who', 'what', 'when', 'where', 'why', 'how', 'do', 'does', 'if', "which"]
+question_words = ['who', 'what', 'when', 'where', 'why', 'how']
 
 # ---------------------- DATA LOADING ----------------------
 with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
@@ -131,7 +120,18 @@ def clean_sentence(user_input):
     for token in doc:
         if token.is_alpha and token.lemma_ not in stop_words:
             if token.pos_ in ["NOUN", "PROPN", "ADJ", "VERB", "NUM"]:
-                keywords.append(token.lemma_.lower())
+                # Keep original form for "caught" to preserve meaning
+                if token.text.lower() in ["caught", "arrested", "captured"]:
+                    keywords.append(token.text.lower())
+                else:
+                    keywords.append(token.lemma_.lower())
+    
+    # Add multi-word phrases for better matching
+    text_lower = user_input.lower()
+    if "get caught" in text_lower or "got caught" in text_lower:
+        keywords.append("get-caught")
+    if "where" in text_lower and "caught" in text_lower:
+        keywords.append("where-caught")
     
     return keywords
 
@@ -218,7 +218,8 @@ def get_relevance(cleaned_data, keywords, question_type=None, original_text=""):
             best_item = item
 
     # Return answer if score is high enough
-    return best_item["sentence"] if best_score > 10 else None
+    # Increased threshold to avoid matching unrelated questions
+    return best_item["sentence"] if best_score > 25 else None
 
 # ---------------------- QUESTION DETECTION ----------------------
 def is_question(msg):
