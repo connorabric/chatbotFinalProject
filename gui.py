@@ -51,7 +51,7 @@ send_button = tb.Button(
 )
 send_button.grid(row=1, column=1)
 
-topic = 'Titanic movie'
+topic = 'Catch Me If You Can'
 initial_response = "Hi, I am your virtual assistant, ask me anything about " + topic
 
 root.after(500, lambda: chat_window.insert(tb.END, "Agent: " + initial_response + "\n"))

@@ -45,6 +45,17 @@ misspellings = {
     "director": ["direktor", "dirctor", "directer", "direcor"],
     "performance": ["performence", "perfomance", "performnce", "performnce"],
     "award": ["awrd", "awrad", "aword", "aword"],
+    "becomes" : ['becoms', 'becames', 'becums','becmoes', 'becmes', 'becones','becemose','becimes','becames','becoems'],
+    "frank" : ['frnak','fank','frnk','frark','frannk','frnak','fraank','frak','frnka'],
+    "emotional" : ['emitional','emotinal','emmotional','emocional','emmotianal','emotionel','emotionnal','emtionel','emoiotnal','emontional'],
+    "hanratty" : ['hanraty','hanratti','hanrattey','hanrattty','hanratly','hanarty','hanrattyy','hanrattye','harnatty','hanrarty'],
+    "who" : ['woh','wgo','wh','wo','wjo','whp','whi','wuo'],
+    "film" : ['flim','filim','filnm','fllm','filn','fliim','filmm','filim','fllim','filsm'],
+    "life" : ['lfie','lfe','lif','liife','lifr','lifee','liffe','liife','lifd','lifw'],
+    "identity" : ['identity','identitiy','idenety','idnentity','identiy','identiyt','identity','ideeity'],
+    "father" : ['fater','fahter','fther','fathar','fathe','fgather','fatherr','faterh','faterj','fathre','fagher'],
+    "even" : ['evan','evn','eeven','eevn','evem','efen','eben','evne','evem','eveb'],
+
 }
 
 synonyms = {
@@ -78,7 +89,7 @@ greetings = {
     "evening": "Evening! Great to have you here.",
 }
 
-question_words = ['who', 'what', 'when', 'where', 'why', 'how']
+question_words = ['who', 'what', 'when', 'where', 'why', 'how', 'do', 'does', 'if', "which"]
 
 # ---------------------- DATA LOADING ----------------------
 with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
