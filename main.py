@@ -50,14 +50,12 @@ misspellings = {
 synonyms = {
     "play": ["plays", "played", "portrays", "acts", "depicts"],
     "role": ["roles", "character", "part", "portrayal", "persona"],
-    "catch": ["pursue", "chase", "apprehend", "hunt", "track down"],
-    "fool": ["deceive", "trick", "outsmart", "beguile", "mislead"],
-    "forgery": ["counterfeit", "fake", "falsification", "fraud", "replica"],
-    "flight": ["plane ride", "aviation", "air travel", "airline", "pilot journey"],
-    "investigate": ["investigates", "investigated", "investigating", "look into", "probe"],
-    "lawyer": ["attorney", "counsel", "legal advisor", "advocate", "solicitor"],
-    "detective": ["agent", "investigator", "officer", "FBI agent", "sleuth"],
-    "escape": ["escapes", "evades", "flee", "run away", "get away"],
+    "catch": ["pursue", "chase", "apprehend", "hunt", "track"],
+    "caught": ["captured", "arrested", "apprehended", "capture"],
+    "money": ["cash", "dollars", "million", "amount"],
+    "steal": ["stole", "stolen", "forged", "fraud"],
+    "old": ["age", "aged"],
+    "released": ["premiered", "launched"],
 }
 
 greetings = {
@@ -75,9 +73,6 @@ greetings = {
     "hiya": "Hiya! Nice to connect.",
     "sup": "Sup! Glad you're here.",
     "hello there": "Hello there! Great to have you here.",
-    "hiya friend": "Hiya friend! Always nice to see you.",
-    "hey buddy": "Hey buddy! Glad you're around.",
-    "hi everyone": "Hi everyone! Wonderful to see you all.",
     "morning": "Morning! Wishing you a good day.",
     "afternoon": "Afternoon! Hope your day is going well.",
     "evening": "Evening! Great to have you here.",
@@ -88,44 +83,52 @@ question_words = ['who', 'what', 'when', 'where', 'why', 'how']
 # ---------------------- DATA LOADING ----------------------
 with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
-# ---------------------- CLEAN SENTENCE ----------------------
-def clean_sentence(user_input):
-    doc = nlp(user_input)
-    keywords = [token.lemma_.lower() for token in doc 
-                if token.is_alpha and token.lemma_ not in stop_words and token.pos_ in ["NOUN","PROPN","ADJ","VERB"]]
-    return keywords
+
 # ---------------------- CLEAN TRAINING DATA ----------------------
 def clean_training_data(training_data):
-    parts = [p.strip() for p in training_data.split("|") if p.strip()]
+    lines = training_data.strip().split("\n")
     cleaned_data = []
-
-    for i in range(0, len(parts), 3):
-        sentence = parts[i]
-        keywords = parts[i+1]
-        questions = parts[i+2]
-
-        keyword_list = []
-        for k in keywords.split(","):
-            k = k.strip()
-            cleaned = clean_sentence(k)
-            keyword_list.extend(cleaned)
-        cleaned_data.append({
-            "sentence": sentence,
-            "keywords": keyword_list,
-            "questions": [q.strip() for q in questions.split(",")]
-        })
-
+    
+    for line in lines:
+        parts = [p.strip() for p in line.split("|") if p.strip()]
+        if len(parts) >= 3:
+            sentence = parts[0]
+            keywords_raw = parts[1]
+            questions_raw = parts[2]
+            
+            # Keep keywords as-is (lowercase and split)
+            keyword_list = [k.strip().lower() for k in keywords_raw.split(",")]
+            
+            cleaned_data.append({
+                "sentence": sentence,
+                "sentence_lower": sentence.lower(),
+                "keywords": keyword_list,
+                "questions": [q.strip().lower() for q in questions_raw.split(",")]
+            })
+    
     return cleaned_data
 
-cleaned_data = clean_training_data(training_data)  # Clean once
+cleaned_data = clean_training_data(training_data)
+
+# ---------------------- CLEAN SENTENCE ----------------------
+def clean_sentence(user_input):
+    """Extract meaningful keywords from user input"""
+    doc = nlp(user_input)
+    keywords = []
+    
+    # Get lemmatized keywords
+    for token in doc:
+        if token.is_alpha and token.lemma_ not in stop_words:
+            if token.pos_ in ["NOUN", "PROPN", "ADJ", "VERB", "NUM"]:
+                keywords.append(token.lemma_.lower())
+    
+    return keywords
 
 # ---------------------- CHECK GREETING ----------------------
 def check_greeting(msg):
     msg = msg.strip().lower()
     msg = re.sub(r'[^a-zA-Z ]', '', msg)
     return greetings.get(msg)
-
-
 
 # ---------------------- SPELLING ----------------------
 def correct_spelling(msg):
@@ -155,33 +158,79 @@ def replace_synonyms(msg):
         replaced.append(replaced_word)
     return " ".join(replaced)
 
-# ---------------------- RELEVANCE ----------------------
-def get_relevance(cleaned_data, keywords):
+# ---------------------- EQUIVALENT WORDS ----------------------
+def equivalent_words(word):
+    """Get all equivalent forms of a word"""
+    out = {word}
+    for key, syn_list in synonyms.items():
+        if word == key or word in syn_list:
+            out.add(key)
+            out.update(syn_list)
+    return out
+
+# ---------------------- SIMPLIFIED RELEVANCE MATCHING ----------------------
+def get_relevance(cleaned_data, keywords, question_type=None, original_text=""):
+    """Simple matching based on keyword overlap - no hardcoded logic!"""
     best_item = None
     best_score = 0
+
     for item in cleaned_data:
-        score = sum(2 for kw in keywords if kw in item["keywords"])
+        score = 0
+        
+        # 1. Question type match
+        if question_type and question_type in item["questions"]:
+            score += 15
+        
+        # 2. Check if any user keywords match item keywords
+        for user_kw in keywords:
+            # Get all equivalent forms of the user's keyword
+            equiv = equivalent_words(user_kw)
+            
+            # Check against all item keywords
+            for item_kw in item["keywords"]:
+                for e in equiv:
+                    # Match if keyword contains or is contained
+                    if e in item_kw or item_kw in e:
+                        score += 10
+                        break
+        
+        # 3. Check if keywords appear in the actual sentence
+        for user_kw in keywords:
+            equiv = equivalent_words(user_kw)
+            for e in equiv:
+                if e in item["sentence_lower"]:
+                    score += 5
+                    break
+
         if score > best_score:
             best_score = score
             best_item = item
-    if best_item:
-        return best_item["sentence"]
-    return None
+
+    # Return answer if score is high enough
+    return best_item["sentence"] if best_score > 10 else None
 
 # ---------------------- QUESTION DETECTION ----------------------
 def is_question(msg):
     text = msg.lower().strip()
-    print()
-    if text.endswith("?") or text.split()[0] in question_words:
-        print("made it")
+    
+    if text.endswith("?") or (len(text.split()) > 0 and text.split()[0] in question_words):
+        # Extract question type
+        question_type = None
+        words = text.replace("?", "").split()
+        if words and words[0] in question_words:
+            question_type = words[0]
+        
+        # Get keywords from the question
         keywords = clean_sentence(msg)
-        print(keywords)
-        return get_relevance(cleaned_data, keywords) or "I'm not sure, but I'll learn more soon!"
+        
+        # Use simplified relevance matching
+        answer = get_relevance(cleaned_data, keywords, question_type, msg)
+        return answer or "I'm not sure, but I'll learn more soon!"
+    
     return None
 
 # ---------------------- NEW INFO ----------------------
 def is_new_info(msg):
-    # Placeholder: logic to learn new facts
     if msg.lower() == "testing":
         return "Got it! Added new info."
     return None
@@ -192,38 +241,43 @@ def preprocess(msg):
     msg = replace_synonyms(msg)
     return msg
 
-# ---------------------- MAIN BOT RESPONSE, THIS IS THE MAIN LOGIC ----------------------
+# ---------------------- MAIN BOT RESPONSE ----------------------
 def bot_response(msg):
-    tester = False  
+    if not msg or not msg.strip():
+        return "Please type a question or message."
+    
     msg = preprocess(msg)
 
     greeting = check_greeting(msg)
     if greeting:
-        tester = True
         return greeting
 
     answer = is_question(msg)
     if answer:
-        tester = True
         return answer
 
     new_info_response = is_new_info(msg)
     if new_info_response:
-        tester = True
         return new_info_response
 
-    if not tester:
-        return "Sorry, I am not sure about this. Is there something else you would like to ask?"
-
+    return "Sorry, I am not sure about this. Is there something else you would like to ask?"
 
 # ---------------------- TEST ----------------------
-user_inputs = [
-    "Who is teh main character in the movvie?",
-    "What year was this movie released?",
-    "How old is Leonardo's character?",
-    "This is new info to add", 
-    "how did he get caught", 
-    "how much money did he make?"
-]
-
-
+# if __name__ == "__main__":
+#     user_inputs = [
+#         "how old is leonardo?",
+#         "how old is frank?",
+#         "when was the movie released?",
+#         "who is carl?",
+#         "how much money was stolen?",
+#         "how did frank get caught?",
+#         "how did carl find him?",
+#         "why did frank run away?",
+#         "who plays the main character?"
+#     ]
+    
+#     print("Testing simplified chatbot:\n")
+#     for test_input in user_inputs:
+#         response = bot_response(test_input)
+#         print(f"Q: {test_input}")
+#         print(f"A: {response}\n")
