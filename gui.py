@@ -8,14 +8,15 @@ root = tb.Window(themename="solar")
 root.title("Simple Virtual Assistant")
 root.geometry("690x635")
 
+
 def send_message(event=None):
     msg = my_message.get()
     if msg.strip() != "":
-        chat_window.insert(tb.END, "You: " + msg + "\n")
+        chat_window.insert(tb.END, "You: " + msg + "\n", "user")
         my_message.set("")
 
         response = bot_response(msg)
-        chat_window.insert(tb.END, "Agent: " + response + "\n")
+        chat_window.insert(tb.END, "Agent: " + response + "\n", "agent")
         print(response)
 
 
@@ -29,6 +30,8 @@ chat_window = ScrolledText(
     font=('Verdana', 15)
 )
 chat_window.grid(row=0, column=0, columnspan=2, padx=15, pady=15)
+chat_window.tag_config("agent", foreground="dark grey")
+chat_window.tag_config("user", foreground="white")
 
 my_message = tb.StringVar()
 
