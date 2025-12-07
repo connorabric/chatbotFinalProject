@@ -246,7 +246,7 @@ def is_same_question(msg):
     
     return None
 
-# ---------------------- IS FOLLOW-UP QUESTION ----------------------
+# ---------------------- IS FOLLOW UP QUESTION ----------------------
 def is_follow_up(msg):
     doc = nlp(msg)
     
