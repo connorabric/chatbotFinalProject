@@ -81,7 +81,7 @@ greetings = {
 question_words = ['who', 'what', 'when', 'where', 'why', 'how']
 
 # ---------------------- DATA LOADING ----------------------
-with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
+with open("/Users/Tanner/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
 
 # ---------------------- CLEAN TRAINING DATA ----------------------
@@ -396,21 +396,16 @@ def bot_response(msg):
     return "Sorry, I am not sure about this. Is there something else you would like to ask?"
 
 # ---------------------- TEST ----------------------
-# if __name__ == "__main__":
-#     user_inputs = [
-#         "how old is leonardo?",
-#         "how old is frank?",
-#         "when was the movie released?",
-#         "who is carl?",
-#         "how much money was stolen?",
-#         "how did frank get caught?",
-#         "how did carl find him?",
-#         "why did frank run away?",
-#         "who plays the main character?"
-#     ]
+if __name__ == "__main__":
+    user_inputs = [
+        "Hello there!",
+        "how old is leonardo?",
+        "Who did Leonardo play in the movvie?",
+        "Who does Leonardo play in the movvie?"
+    ]
     
-#     print("Testing simplified chatbot:\n")
-#     for test_input in user_inputs:
-#         response = bot_response(test_input)
-#         print(f"Q: {test_input}")
-#         print(f"A: {response}\n")
+    print("Testing simplified chatbot:\n")
+    for test_input in user_inputs:
+        response = bot_response(test_input)
+        print(f"Q: {test_input}")
+        print(f"A: {response}\n")
