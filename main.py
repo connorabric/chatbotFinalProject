@@ -81,10 +81,7 @@ greetings = {
 question_words = ['who', 'what', 'when', 'where', 'why', 'how']
 
 # ---------------------- DATA LOADING ----------------------
-# with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
-#     training_data = file.read()
-
-with open("/Users/Tanner/Documents/trainingdata.txt", "r") as file:
+with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
 
 # ---------------------- CLEAN TRAINING DATA ----------------------
@@ -224,6 +221,32 @@ def get_relevance(cleaned_data, keywords, question_type=None, original_text=""):
     # Increased threshold to avoid matching unrelated questions
     return best_item["sentence"] if best_score > 25 else None
 
+# ---------------------- IS SAME QUESTION ----------------------
+last_question = None
+times_repeated = 0
+
+def is_same_question(msg):
+    """Track repeated questions and provide varied responses"""
+    global last_question
+    global times_repeated
+
+    # Determines if the question is the same as the last_question
+    if msg == last_question:
+        times_repeated += 1
+    else:
+        last_question = msg
+        times_repeated = 0
+        return None
+    
+    # Determines the number of times asked and answers differently based on how many times asked
+    if times_repeated == 1:
+        return "I have already responded to this question, but to satisfy your curiosity, "
+    elif times_repeated > 1:
+        return f"I have answered this {times_repeated} times already, but to satisfy your curiosity, "
+    
+    return None
+
+
 # ---------------------- QUESTION DETECTION ----------------------
 def is_question(msg):
     text = msg.lower().strip()
@@ -238,51 +261,114 @@ def is_question(msg):
         # Get keywords from the question
         keywords = clean_sentence(msg)
         
+        # Check if this is a repeated question
+        same_question_prefix = is_same_question(msg)
         
-        #Determines if question is the same
-        same = is_same_question(msg)
-        if same:
-            answer = same + get_relevance(cleaned_data, keywords, question_type, msg) # Use simplified relevance matching
-            return answer
+        # Get the answer
+        answer = get_relevance(cleaned_data, keywords, question_type, msg)
         
-        answer = get_relevance(cleaned_data, keywords, question_type, msg) # Use simplified relevance matching
+        # If it's a repeated question and we have an answer, add the prefix
+        if same_question_prefix and answer:
+            return same_question_prefix + answer
+        
         return answer or "I'm not sure, but I'll learn more soon!"
     
     return None
 
-# ---------------------- NEW INFO ----------------------
+# ---------------------- NEW INFO DETECTION ----------------------
 def is_new_info(msg):
-    if msg.lower() == "testing":
-        return "Got it! Added new info."
+    text = msg.lower().strip()
+    if len(text.split()) < 5:
+        return None
+    
+    doc = nlp(text)
+    
+    has_subject = False
+    has_verb = False
+    has_object_or_complement = False
+    
+    for token in doc:
+        if token.dep_ in ["nsubj", "nsubjpass"]:  # Subject
+            has_subject = True
+        if token.pos_ == "VERB":  # Verb
+            has_verb = True
+        if token.dep_ in ["dobj", "attr", "prep", "acomp"]:  # Object/complement
+            has_object_or_complement = True
+    
+    is_declarative = has_subject and has_verb and has_object_or_complement
+    
+    if not is_declarative:
+        return None
+    
+    has_entities = len(doc.ents) > 0
+    has_proper_nouns = any(token.pos_ == "PROPN" for token in doc)
+    
+    if has_entities or has_proper_nouns:
+        return add_new_info(msg)
+    
     return None
+
+
+def add_new_info(msg):
+    doc = nlp(msg) 
+    basic_keywords = clean_sentence(msg) 
+    entities = [ent.text.lower() for ent in doc.ents] 
+    noun_chunks = [chunk.text.lower() for chunk in doc.noun_chunks]
+    compound_keywords = []
+    
+    subjects = [token.text.lower() for token in doc if token.dep_ in ["nsubj", "nsubjpass"]]
+    verbs = [token.lemma_.lower() for token in doc if token.pos_ == "VERB"]
+    objects = [token.text.lower() for token in doc if token.dep_ in ["dobj", "pobj", "attr"]]
+    locations = [token.text.lower() for token in doc if token.dep_ == "prep" and token.head.pos_ == "VERB"]
+    
+    for subj in subjects:
+        for verb in verbs:
+            compound_keywords.append(f"{subj}-{verb}")
+            for obj in objects:
+                compound_keywords.append(f"{subj}-{verb}-{obj}")
+        for obj in objects:
+            compound_keywords.append(f"{subj}-{obj}")
+        for loc in locations:
+            compound_keywords.append(f"{subj}-{loc}")
+    
+    all_keywords = list(set(basic_keywords + entities + noun_chunks + compound_keywords))
+    
+    question_types = ["what"]  # Default
+    
+    if any(token.lemma_ in ["play", "act", "perform", "portray"] for token in doc):
+        question_types.append("who")
+    if any(ent.label_ in ["DATE", "TIME"] for ent in doc.ents):
+        question_types.append("when")
+    if any(ent.label_ in ["GPE", "LOC", "FAC"] for ent in doc.ents) or any(token.dep_ == "prep" for token in doc):
+        question_types.append("where")
+    if any(token.lemma_ in ["because", "cause", "reason", "since"] for token in doc):
+        question_types.append("why")
+    if any(token.lemma_ in ["by", "use", "method", "way", "through"] for token in doc):
+        question_types.append("how")
+    
+    new_entry = {
+        "sentence": msg,
+        "sentence_lower": msg.lower(),
+        "keywords": all_keywords,
+        "questions": question_types
+    }
+    
+    cleaned_data.append(new_entry)
+    
+    try:
+        with open("/Users/connorabric/Documents/trainingdata.txt", "a") as f:
+            keyword_str = ", ".join(all_keywords)
+            question_str = ", ".join(question_types)
+            f.write(f"\n{msg} | {keyword_str} | {question_str} |")
+        return f"Thanks! I learned: '{msg}'. I'll remember that!"
+    except Exception as e:
+        return f"Got it! I learned: '{msg}' (stored in memory for this session)"
 
 # ---------------------- PREPROCESS ----------------------
 def preprocess(msg):
     msg = correct_spelling(msg)
     msg = replace_synonyms(msg)
     return msg
-
-# ---------------------- IS SAME QUESTION ----------------------
-last_question = None
-times_repeated = 0
-
-def is_same_question(msg):
-    global last_question
-    global times_repeated
-
-    # Determines if the question is the same as the last_question
-    if msg == last_question:
-        times_repeated += 1
-    else:
-        last_question = msg
-        times_repeated = 0
-        return
-    
-    # Determines the number of times asked and answers differently based on how many times asked
-    if times_repeated == 1:
-        return "I have already responded to this question, but to satisfy your curiosity, "
-    elif times_repeated > 1:
-        return f"I have answered this {times_repeated} times already, but to satisfy your curiosity, "
 
 # ---------------------- MAIN BOT RESPONSE ----------------------
 def bot_response(msg):
@@ -291,18 +377,22 @@ def bot_response(msg):
     
     msg = preprocess(msg)
 
+    # 1. Check for greetings
     greeting = check_greeting(msg)
     if greeting:
         return greeting
 
+    # 2. Check for questions
     answer = is_question(msg)
     if answer:
         return answer
 
+    # 3. Check for new information (before fallback)
     new_info_response = is_new_info(msg)
     if new_info_response:
         return new_info_response
 
+    # 4. Default fallback
     return "Sorry, I am not sure about this. Is there something else you would like to ask?"
 
 # ---------------------- TEST ----------------------
@@ -324,13 +414,3 @@ def bot_response(msg):
 #         response = bot_response(test_input)
 #         print(f"Q: {test_input}")
 #         print(f"A: {response}\n")
-
-if __name__ == "__main__":
-    answer = bot_response("how old is leonardo?")
-    print(answer)
-    answer = bot_response("how old is leonardo?")
-    print(answer)  
-    answer = bot_response("how old is leonardo?")
-    print(answer)
-    answer = bot_response("how old is leonardo?")
-    print(answer)
