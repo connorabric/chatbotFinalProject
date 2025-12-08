@@ -87,7 +87,7 @@ last_question = {
 
 
 # ---------------------- DATA LOADING ----------------------
-with open("/Users/Tanner/Documents/trainingdata.txt", "r") as file:
+with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
 
 # ---------------------- CLEAN TRAINING DATA ----------------------
@@ -225,7 +225,7 @@ def get_relevance(cleaned_data, keywords, question_type=None, original_text=""):
 
     # Return answer if score is high enough
     # Increased threshold to avoid matching unrelated questions
-    return best_item["sentence"] if best_score > 25 else None
+    return best_item["sentence"] if best_score > 30 else None
 
 # ---------------------- IS SAME QUESTION ----------------------
 times_repeated = 0
@@ -463,17 +463,33 @@ test_questions_1 = [
 ]
 
 test_questions_2 = [
-    "Who plays Frank in Catch Me If You Can?",
-    "How old is he?",  # Follow-up: "he" = Leonardo
-    "Who does Tom Hanks play?",
-    "What did he base his accent on?"
+    "Who is the main character in Catch Me If You Can?",
+"How old was Leonardo DiCaprio when he filmed the movie?",
+"Where was Frank finally caught?",
+"How much money did Frank steal?",
+"Who directed Catch Me If You Can?",
+"What year was the movie released?",
+"Who plays the FBI agent?",
+"Why did Frank start committing crimes?",
+"How did Frank escape on the airplane?",
+"What jobs did Frank pretend to have?",
+"Who composed the music for the movie?",
+"How many countries did Frank commit fraud in?",
+"What does Frank do now?",
+"Who plays Frank's father?",
+"How long did the movie take to film?",
+"What rating did the movie get on Rotten Tomatoes?",
+"How did Frank forge checks?",
+"Who is Brenda in the movie?",
+"Was the movie based on a true story?",
+"How much money did the movie make at the box office?"
 ]
 
-print("Testing simplified chatbot:\n")
-for test_input in test_questions_1:
-    response = bot_response(test_input)
-    print(f"Q: {test_input}")
-    print(f"A: {response}\n")
+# print("Testing simplified chatbot:\n")
+# for test_input in test_questions_1:
+#     response = bot_response(test_input)
+#     print(f"Q: {test_input}")
+#     print(f"A: {response}\n")
 
 print("-------------------------------------------------------")
 

@@ -1,5 +1,5 @@
 from main import bot_response  
-
+import time
 from tkinter import *
 import ttkbootstrap as tb
 from ttkbootstrap.scrolled import ScrolledText
@@ -10,14 +10,21 @@ root.geometry("690x635")
 
 
 def send_message(event=None):
-    msg = my_message.get()
-    if msg.strip() != "":
-        chat_window.insert(tb.END, "You: " + msg + "\n", "user")
-        my_message.set("")
+   msg = my_message.get()
+   if msg.strip() != "":
+       chat_window.insert(tb.END, "You: " + msg + "\n")
+       my_message.set("")
 
-        response = bot_response(msg)
-        chat_window.insert(tb.END, "Agent: " + response + "\n", "agent")
-        print(response)
+
+       response = bot_response(msg)
+       chat_window.insert(tb.END, "Agent: ", "agent")
+       chat_window.update()
+       for ch in buffer(response):
+           chat_window.insert(tb.END,ch)
+           chat_window.update()
+       chat_window.insert(tb.END, "\n")
+       print(response)
+
 
 
 chat_window = ScrolledText(
@@ -35,6 +42,12 @@ chat_window.tag_config("user", foreground="white")
 
 my_message = tb.StringVar()
 
+#--------------------- BUFFER RESPONSE------------------
+def buffer(response):
+   delay = .025
+   for ch in response:
+       yield ch
+       time.sleep(delay)
 entry_field = tb.Entry(
     root,
     textvariable=my_message,
