@@ -3,7 +3,7 @@ import spacy
 
 nlp = spacy.load("en_core_web_sm")
 
-# ---------------------- STOP WORDS, SYNONYMS, MISSPELLED WORDS----------------------
+# ---------------------- STOP WORDS, SYNONYMS, MISSPELLED WORDS, ETC----------------------
 stop_words = [
     "a", "an", "the", "and", "or", "but",
     "if", "then", "else",
@@ -79,6 +79,12 @@ greetings = {
 }
 
 question_words = ['who', 'what', 'when', 'where', 'why', 'how']
+
+last_question = {
+    "question" : None,
+    "keywords" : [],
+}
+
 
 # ---------------------- DATA LOADING ----------------------
 with open("/Users/Tanner/Documents/trainingdata.txt", "r") as file:
@@ -219,22 +225,22 @@ def get_relevance(cleaned_data, keywords, question_type=None, original_text=""):
 
     # Return answer if score is high enough
     # Increased threshold to avoid matching unrelated questions
-    return best_item["sentence"] if best_score > 25 else None
+    return best_item["sentence"] if best_score > 30 else None
 
 # ---------------------- IS SAME QUESTION ----------------------
-last_question = None
 times_repeated = 0
 
-def is_same_question(msg):
+def is_same_question(msg, keywords):
     """Track repeated questions and provide varied responses"""
-    global last_question
+    # global last_question
     global times_repeated
 
     # Determines if the question is the same as the last_question
-    if msg == last_question:
+    if msg == last_question["question"]:
         times_repeated += 1
     else:
-        last_question = msg
+        last_question["question"] = msg
+        last_question["keywords"] = keywords
         times_repeated = 0
         return None
     
@@ -246,6 +252,33 @@ def is_same_question(msg):
     
     return None
 
+# ---------------------- IS FOLLOW-UP QUESTION ----------------------
+def is_follow_up(msg):
+    # Uses list instead of Spacy for more strict searching
+    pronouns = ["he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs", "it", "its", "that", "this","these","those"]
+    context_words = ["also", "too", "additionally", "furthermore"]
+    context_phrases = ["what about", "how about", "tell me more"]
+
+    msg = msg.lower().replace("?", "")
+    if any(phrase in msg for phrase in context_phrases):
+        return True
+
+    doc = nlp(msg)
+    
+    # Check if message has:
+    # 1. Pronouns w/o any proper nouns OR
+    # 2. Pronouns before any proper nouns OR
+    # 3. Any context words
+    has_proper_noun = False
+    for token in doc:
+        if token.text.lower() in pronouns and has_proper_noun is False:
+            return True
+        elif token.pos_ == "PROPN":
+            has_proper_noun = True
+        elif token.text.lower() in context_words:
+            return True
+
+    return False
 
 # ---------------------- QUESTION DETECTION ----------------------
 def is_question(msg):
@@ -260,12 +293,19 @@ def is_question(msg):
         
         # Get keywords from the question
         keywords = clean_sentence(msg)
+
+        # Check if this is a follow-up question
+        if is_follow_up(msg) and last_question["keywords"]:
+            search_keywords = keywords + last_question["keywords"]
+        else:
+            search_keywords = keywords
         
         # Check if this is a repeated question
-        same_question_prefix = is_same_question(msg)
+        same_question_prefix = is_same_question(msg, search_keywords)
         
         # Get the answer
-        answer = get_relevance(cleaned_data, keywords, question_type, msg)
+        answer = get_relevance(cleaned_data, search_keywords, question_type, msg)
+
         
         # If it's a repeated question and we have an answer, add the prefix
         if same_question_prefix and answer:
