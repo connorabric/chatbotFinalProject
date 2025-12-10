@@ -87,7 +87,7 @@ last_question = {
 
 
 # ---------------------- DATA LOADING ----------------------
-with open("/Users/Tanner/Documents/trainingdata.txt", "r") as file:
+with open("/Users/connorabric/Documents/trainingdata.txt", "r") as file:
     training_data = file.read()
 
 # ---------------------- CLEAN TRAINING DATA ----------------------
@@ -253,15 +253,27 @@ def is_same_question(msg, keywords):
     return None
 
 # ---------------------- IS FOLLOW-UP QUESTION ----------------------
-def is_follow_up(msg):
+def is_follow_up(msg, keywords):
     # Uses list instead of Spacy for more strict searching
     pronouns = ["he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs", "it", "its", "that", "this","these","those"]
     context_words = ["also", "too", "additionally", "furthermore"]
-    context_phrases = ["what about", "how about", "tell me more"]
+    context_phrases = ["what about", "how about"]
 
     msg = msg.lower().replace("?", "")
+
+    # Checks if any context phrases are in the message. If so, it returns keywords with the last question's PROPNs
     if any(phrase in msg for phrase in context_phrases):
-        return True
+        if not last_question["keywords"]:
+            return keywords
+        
+        if last_question.get("question"):
+            prev_doc = nlp(last_question["question"])
+            prev_proper_nouns = [token.lemma_.lower() for token in prev_doc if token.pos_ == "PROPN"] # Creates a list of proper nouns from previous question
+            filtered_last_keywords = [kw for kw in last_question["keywords"] if kw not in prev_proper_nouns] # Creates a new list of keywords without proper nouns
+        else:
+            filtered_last_keywords = last_question["keywords"]
+
+        return keywords + filtered_last_keywords
 
     doc = nlp(msg)
     
@@ -271,14 +283,18 @@ def is_follow_up(msg):
     # 3. Any context words
     has_proper_noun = False
     for token in doc:
-        if token.text.lower() in pronouns and has_proper_noun is False:
-            return True
+        if token.text in pronouns and has_proper_noun is False:
+            if last_question["keywords"]:
+                return keywords + last_question["keywords"]
+            return keywords # In case no previous question
         elif token.pos_ == "PROPN":
             has_proper_noun = True
-        elif token.text.lower() in context_words:
-            return True
+        elif token.text in context_words:
+            if last_question["keywords"]:
+                return keywords + last_question["keywords"]
+            return keywords # In case no previous question
 
-    return False
+    return keywords
 
 # ---------------------- QUESTION DETECTION ----------------------
 def is_question(msg):
@@ -294,11 +310,8 @@ def is_question(msg):
         # Get keywords from the question
         keywords = clean_sentence(msg)
 
-        # Check if this is a follow-up question
-        if is_follow_up(msg) and last_question["keywords"]:
-            search_keywords = keywords + last_question["keywords"]
-        else:
-            search_keywords = keywords
+        # Returns an edited list if it is a follow-up
+        search_keywords = is_follow_up(msg, keywords)
         
         # Check if this is a repeated question
         same_question_prefix = is_same_question(msg, search_keywords)
@@ -436,16 +449,64 @@ def bot_response(msg):
     return "Sorry, I am not sure about this. Is there something else you would like to ask?"
 
 # ---------------------- TEST ----------------------
-if __name__ == "__main__":
-    user_inputs = [
-        "Hello there!",
-        "how old is leonardo?",
-        "Who did Leonardo play in the movvie?",
-        "Who does Leonardo play in the movvie?"
-    ]
+# if __name__ == "__main__":
+#     user_inputs = [
+#         "how old is leonardo?",
+#         "how old is frank?",
+#         "when was the movie released?",
+#         "who is carl?",
+#         "how much money was stolen?",
+#         "how did frank get caught?",
+#         "how did carl find him?",
+#         "why did frank run away?",
+#         "who plays the main character?"
+#     ]
     
-    print("Testing simplified chatbot:\n")
-    for test_input in user_inputs:
-        response = bot_response(test_input)
-        print(f"Q: {test_input}")
-        print(f"A: {response}\n")
+#     print("Testing simplified chatbot:\n")
+#     for test_input in user_inputs:
+#         response = bot_response(test_input)
+#         print(f"Q: {test_input}")
+#         print(f"A: {response}\n")
+
+test_questions_1 = [
+    "Who plays Frank in Catch Me If You Can?",
+    "How old is Frank?",
+    "Who does Tom Hanks play?"
+    "What did Tom Hanks base his accent on?"
+]
+
+test_questions_2 = [
+    "Who is the main character in Catch Me If You Can?",
+"How old was Leonardo DiCaprio when he filmed the movie?",
+"Where was Frank finally caught?",
+"How much money did Frank steal?",
+"Who directed Catch Me If You Can?",
+"What year was the movie released?",
+"Who plays the FBI agent?",
+"Why did Frank start committing crimes?",
+"How did Frank escape on the airplane?",
+"What jobs did Frank pretend to have?",
+"Who composed the music for the movie?",
+"How many countries did Frank commit fraud in?",
+"What does Frank do now?",
+"Who plays Frank's father?",
+"How long did the movie take to film?",
+"What rating did the movie get on Rotten Tomatoes?",
+"How did Frank forge checks?",
+"Who is Brenda in the movie?",
+"Was the movie based on a true story?",
+"How much money did the movie make at the box office?"
+]
+
+# print("Testing simplified chatbot:\n")
+# for test_input in test_questions_1:
+#     response = bot_response(test_input)
+#     print(f"Q: {test_input}")
+#     print(f"A: {response}\n")
+
+# print("-------------------------------------------------------")
+
+# for test_input in test_questions_2:
+#     response = bot_response(test_input)
+#     print(f"Q: {test_input}")
+#     print(f"A: {response}\n")
