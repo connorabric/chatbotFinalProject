@@ -253,15 +253,27 @@ def is_same_question(msg, keywords):
     return None
 
 # ---------------------- IS FOLLOW-UP QUESTION ----------------------
-def is_follow_up(msg):
+def is_follow_up(msg, keywords):
     # Uses list instead of Spacy for more strict searching
     pronouns = ["he", "him", "his", "she", "her", "hers", "they", "them", "their", "theirs", "it", "its", "that", "this","these","those"]
     context_words = ["also", "too", "additionally", "furthermore"]
-    context_phrases = ["what about", "how about", "tell me more"]
+    context_phrases = ["what about", "how about"]
 
     msg = msg.lower().replace("?", "")
+
+    # Checks if any context phrases are in the message. If so, it returns keywords with the last question's PROPNs
     if any(phrase in msg for phrase in context_phrases):
-        return True
+        if not last_question["keywords"]:
+            return keywords
+        
+        if last_question.get("question"):
+            prev_doc = nlp(last_question["question"])
+            prev_proper_nouns = [token.lemma_.lower() for token in prev_doc if token.pos_ == "PROPN"] # Creates a list of proper nouns from previous question
+            filtered_last_keywords = [kw for kw in last_question["keywords"] if kw not in prev_proper_nouns] # Creates a new list of keywords without proper nouns
+        else:
+            filtered_last_keywords = last_question["keywords"]
+
+        return keywords + filtered_last_keywords
 
     doc = nlp(msg)
     
@@ -271,14 +283,18 @@ def is_follow_up(msg):
     # 3. Any context words
     has_proper_noun = False
     for token in doc:
-        if token.text.lower() in pronouns and has_proper_noun is False:
-            return True
+        if token.text in pronouns and has_proper_noun is False:
+            if last_question["keywords"]:
+                return keywords + last_question["keywords"]
+            return keywords # In case no previous question
         elif token.pos_ == "PROPN":
             has_proper_noun = True
-        elif token.text.lower() in context_words:
-            return True
+        elif token.text in context_words:
+            if last_question["keywords"]:
+                return keywords + last_question["keywords"]
+            return keywords # In case no previous question
 
-    return False
+    return keywords
 
 # ---------------------- QUESTION DETECTION ----------------------
 def is_question(msg):
@@ -294,11 +310,8 @@ def is_question(msg):
         # Get keywords from the question
         keywords = clean_sentence(msg)
 
-        # Check if this is a follow-up question
-        if is_follow_up(msg) and last_question["keywords"]:
-            search_keywords = keywords + last_question["keywords"]
-        else:
-            search_keywords = keywords
+        # Returns an edited list if it is a follow-up
+        search_keywords = is_follow_up(msg, keywords)
         
         # Check if this is a repeated question
         same_question_prefix = is_same_question(msg, search_keywords)
@@ -491,9 +504,9 @@ test_questions_2 = [
 #     print(f"Q: {test_input}")
 #     print(f"A: {response}\n")
 
-print("-------------------------------------------------------")
+# print("-------------------------------------------------------")
 
-for test_input in test_questions_2:
-    response = bot_response(test_input)
-    print(f"Q: {test_input}")
-    print(f"A: {response}\n")
+# for test_input in test_questions_2:
+#     response = bot_response(test_input)
+#     print(f"Q: {test_input}")
+#     print(f"A: {response}\n")
